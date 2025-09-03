@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sliding Puzzle Challenge</title>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #2b5876, #4e4376);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      color: #fff;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 25px;
+      border-radius: 20px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+      text-align: center;
+      backdrop-filter: blur(10px);
+      width: 90%;
+      max-width: 400px;
+    }
+
+    h1 {
+      font-size: 26px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    #game {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 20px auto;
+    }
+
+    .cell {
+      background: rgba(255, 255, 255, 0.2);
+      font-size: 20px;
+      font-weight: bold;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      color: #ffeb3b;
+      height: 70px;
+      transition: all 0.3s ease;
+    }
+
+    .cell:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.05);
+    }
+
+    .empty {
+      background: rgba(0, 0, 0, 0.2);
+      border: 2px dashed rgba(255, 255, 255, 0.4);
+      cursor: default;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 12px 25px;
+      border: none;
+      background: #00c853;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #009624;
+      transform: scale(1.05);
+    }
+
+    #message {
+      margin-top: 20px;
+      font-size: 16px;
+      font-weight: bold;
+      min-height: 40px;
+    }
+
+    /* Clue Box */
+    .clue {
+      margin-top: 15px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.15);
+      border-left: 5px solid #ffeb3b;
+      border-radius: 10px;
+      animation: fadeIn 1s ease;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .shake {
+      animation: shakeAnim 0.4s;
+    }
+
+    @keyframes shakeAnim {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-5px); }
+      40%, 80% { transform: translateX(5px); }
+    }
+
+    @media (max-width: 500px) {
+      .cell {
+        height: 60px;
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔢 Sliding Puzzle</h1>
+    <p>Arrange numbers from 1 → 15, then press <b>Submit</b>!</p>
+
+    <div id="game"></div>
+    <button onclick="checkAnswer()">✅ Submit</button>
+    <div id="message"></div>
+  </div>
+
+  <script>
+    const size = 4;  
+    const maxNumber = size * size - 1; 
+    const gameDiv = document.getElementById('game');
+    const messageDiv = document.getElementById('message');
+    let board = [];
+
+    function createSolvedBoard() {
+      let arr = [];
+      for (let i = 1; i <= maxNumber; i++) arr.push(i);
+      arr.push(null); 
+      return arr;
+    }
+
+    function shuffleBoard(array) {
+      let shuffled = array.slice();
+      do {
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          let j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+      } while (!isSolvable(shuffled) || isSolved(shuffled));
+      return shuffled;
+    }
+
+    function isSolvable(arr) {
+      let invCount = 0;
+      for (let i = 0; i < arr.length; i++) {
+        for (let j = i + 1; j < arr.length; j++) {
+          if (arr[i] && arr[j] && arr[i] > arr[j]) invCount++;
+        }
+      }
+      let emptyIndex = arr.indexOf(null);
+      let emptyRow = Math.floor(emptyIndex / size);
+      let emptyRowFromBottom = size - emptyRow;
+      return ((invCount + emptyRowFromBottom) % 2) === 0;
+    }
+
+    function isSolved(arr = board) {
+      for (let i = 0; i < maxNumber; i++) {
+        if (arr[i] !== i + 1) return false;
+      }
+      return arr[maxNumber] === null;
+    }
+
+    function renderBoard() {
+      gameDiv.innerHTML = '';
+      board.forEach((num, i) => {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        if (num === null) {
+          cell.classList.add('empty');
+        } else {
+          cell.textContent = num;
+          cell.addEventListener('click', () => tryMove(i));
+        }
+        gameDiv.appendChild(cell);
+      });
+    }
+
+    function tryMove(index) {
+      const emptyIndex = board.indexOf(null);
+      const validMoves = getAdjacentIndices(emptyIndex);
+      if (validMoves.includes(index)) {
+        [board[emptyIndex], board[index]] = [board[index], board[emptyIndex]];
+        renderBoard();
+      }
+    }
+
+    function getAdjacentIndices(idx) {
+      let adj = [];
+      const row = Math.floor(idx / size);
+      const col = idx % size;
+      if (row > 0) adj.push(idx - size);      
+      if (row < size - 1) adj.push(idx + size); 
+      if (col > 0) adj.push(idx - 1);         
+      if (col < size - 1) adj.push(idx + 1);  
+      return adj;
+    }
+
+    function initGame() {
+      messageDiv.innerHTML = '';
+      const solvedBoard = createSolvedBoard();
+      board = shuffleBoard(solvedBoard);
+      renderBoard();
+    }
+
+    function checkAnswer() {
+      messageDiv.classList.remove("shake");
+      if (isSolved()) {
+        messageDiv.innerHTML = `<div class="clue">✅ Correct!<br>🔍 Clue:  A second home on campus ground, with many stories all around. What am I?div>`;
+      } else {
+        messageDiv.textContent = "❌ Wrong answer. Try again!";
+        messageDiv.classList.add("shake");
+      }
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
